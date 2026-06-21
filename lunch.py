@@ -2,8 +2,8 @@ import streamlit as st
 import random
 import time
 
-st.title("🏢 우리 회사 전용 점심 메뉴 해결사 (거리 필터 추가!)")
-st.write("출근 멤버의 취향과 오늘 날씨(거리)까지 고려하는 완벽한 솔루션입니다.")
+st.title("🏢 점심메뉴 추천")
+st.write("이렇게 해도 또 싫다고 하겠지.")
 
 st.divider()
 
