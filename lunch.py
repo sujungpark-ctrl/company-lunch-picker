@@ -9,7 +9,7 @@ st.divider()
 
 # 1. 실제 자주 가는 식당 데이터베이스 (왕분식, 골목식당 추가)
 menu_db = {
-    "한식/든든한 국물 🍚": [
+    "한식 🍚": [
         "24시전주콩나물국밥", "담미온", "무청감자탕", "본가큰댁설렁탕", 
         "서소문", "밀본", "육전국밥", "뚝섬도락", "칼(칼국수)", 
         "프리미엄직원식당(한식뷔페)", "마시쏘(부대찌개)", "완백(부대찌개)",
@@ -50,7 +50,7 @@ veto_db = {
 # --- 필터 영역 시작 ---
 
 # 기능 A: 오늘 출근 인원 체크
-st.subheader("👥 오늘 함께 점심 먹는 멤버")
+st.subheader("👥 인물별 블랙리스트")
 present_members = st.multiselect(
     "오늘 출근한 멤버들을 선택해 주세요:",
     list(veto_db.keys())
@@ -62,12 +62,12 @@ for member in present_members:
         blacklisted_restaurants.add(restaurant)
 
 # 기능 B: 오늘 날씨 및 거리 필터
-st.subheader("🌦️ 오늘 날씨나 컨디션은 어떤가요?")
+st.subheader("🌦️ 거리 허용범위")
 weather_choice = st.radio(
     "허용 가능한 이동 범위를 골라주세요:",
     [
-        "상관없음 (날씨 굿! 멀리 산책 겸 나가도 좋아) ☀️",
-        "중간 거리까지만 (적당히 걸어갈 만한 곳) 🚶‍♂️",
+        "상관없음",
+        "중간 거리까지만 ",
         "무조건 가까운 곳 (비, 눈, 폭염, 한파, 귀찮음 극대화) ☔🥵"
     ]
 )
@@ -79,7 +79,7 @@ if "상관없음" in weather_choice:
     allowed_distances.append("far")
 
 # 기능 C: 💳 결제 수단 필터 (새로 추가됨!)
-st.subheader("💳 오늘 결제는 어떻게 하나요?")
+st.subheader("💳 결제 수단")
 payment_choice = st.radio(
     "식권대장 어플 사용 여부를 선택해 주세요:",
     [
@@ -89,7 +89,7 @@ payment_choice = st.radio(
 )
 
 # 기능 D: 오늘 피하고 싶은 메뉴 종류 선택
-st.subheader("🙅‍♂️ 오늘 피하고 싶은 메뉴 종류가 있나요?")
+st.subheader("🙅‍♂️ 오늘 피하고 싶은 카테고리")
 exclude_categories = st.multiselect(
     "물리는 메뉴 종류는 체크해서 제외해 주세요:",
     list(menu_db.keys())
