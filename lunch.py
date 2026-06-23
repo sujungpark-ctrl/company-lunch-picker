@@ -1,19 +1,39 @@
 import streamlit as st
 import random
 import time
+from datetime import date
+
+# --- 세션 상태(Session State) 초기화 (새로 추가된 핵심 기능) ---
+# 1. 오늘 날짜 저장 (날짜가 바뀌면 리셋하기 위함)
+if "today_date" not in st.session_state:
+    st.session_state.today_date = date.today()
+
+# 날짜가 어제랑 다르면(즉, 하루가 지났으면) 임시 제외 목록 초기화
+if st.session_state.today_date != date.today():
+    st.session_state.today_date = date.today()
+    st.session_state.temp_rejected = set()
+
+# 2. 오늘 하루 동안 임시로 제외할 식당 목록
+if "temp_rejected" not in st.session_state:
+    st.session_state.temp_rejected = set()
+
+# 3. 마지막으로 뽑힌 식당 저장
+if "last_picked" not in st.session_state:
+    st.session_state.last_picked = None
+# -----------------------------------------------------------------
 
 st.title("🏢 점심 메뉴 추천")
 st.write("이래도 칭얼거릴거 다 안다")
 
 st.divider()
 
-# 1. 실제 자주 가는 식당 데이터베이스 (왕분식, 골목식당 추가)
+# 1. 실제 자주 가는 식당 데이터베이스
 menu_db = {
     "한식 🍚": [
         "24시전주콩나물국밥", "담미온", "무청감자탕", "본가큰댁설렁탕", 
         "서소문", "밀본", "육전국밥", "뚝섬도락", "칼(칼국수)", 
         "프리미엄직원식당(한식뷔페)", "마시쏘(부대찌개)", "완백(부대찌개)",
-        "왕분식", "골목식당"  # 새로 추가된 단골집!
+        "왕분식", "골목식당"
     ],
     "중식 🐼": ["신신원", "달구벌반점"],
     "일식 🍣": ["오늘동", "멘쿠도"],
@@ -21,7 +41,7 @@ menu_db = {
     "패스트푸드 🍔": ["프랭크버거", "롯데리아"]
 }
 
-# 2. 🗺️ 식당별 거리 데이터베이스 (새 식당들은 '가까운 곳'으로 분류)
+# 2. 🗺️ 식당별 거리 데이터베이스
 distance_db = {
     "close": [
         "신신원", "뚝섬도락", "달구벌반점", "오늘동", 
@@ -78,7 +98,7 @@ if "상관없음" in weather_choice or "중간 거리" in weather_choice:
 if "상관없음" in weather_choice:
     allowed_distances.append("far")
 
-# 기능 C: 💳 결제 수단 필터 (새로 추가됨!)
+# 기능 C: 💳 결제 수단 필터
 st.subheader("💳 결제 수단")
 payment_choice = st.radio(
     "식권대장 어플 사용 여부를 선택해 주세요:",
@@ -99,26 +119,25 @@ exclude_categories = st.multiselect(
 final_candidates = []
 
 for category, restaurants in menu_db.items():
-    # 1. 카테고리 필터
     if category not in exclude_categories:
         for res in restaurants:
-            # 2. 직원 블랙리스트 필터
-            if res not in blacklisted_restaurants:
-                # 3. 거리 필터
+            # 직원 블랙리스트 필터 + "오늘 한 번 까인 식당" 필터 동시 적용
+            if res not in blacklisted_restaurants and res not in st.session_state.temp_rejected:
                 is_allowed_distance = False
                 for dist_type in allowed_distances:
                     if res in distance_db[dist_type]:
                         is_allowed_distance = True
                 
                 if is_allowed_distance:
-                    # 4. 결제 수단 필터 (식권대장 전용 선택 시, 현금 전용 매장은 탈락!)
                     if "식권대장 결제 가능" in payment_choice and res in cash_only_list:
                         continue
-                    
-                    # 모든 필터를 통과한 진짜 알짜배기 후보만 추가
                     final_candidates.append(res)
 
 st.divider()
+
+# --- 현재 임시 제외된 식당 현황 보여주기 (옵션) ---
+if st.session_state.temp_rejected:
+    st.caption(f"🚫 오늘 맘에 안 들어서 쳐낸 식당들: {', '.join(st.session_state.temp_rejected)} (내일이면 다시 부활합니다)")
 
 # 5. 운명의 룰렛 돌리기
 st.subheader("🎲 오늘의 점심 운명은?")
@@ -135,17 +154,26 @@ if len(final_candidates) > 0:
             
         with st.spinner("최종 결정 중... 두구두구..."):
             time.sleep(0.8)
-            selected_restaurant = random.choice(final_candidates)
+            # 추첨 결과를 session_state에 저장
+            st.session_state.last_picked = random.choice(final_candidates)
             
         status_text.empty() 
+
+    # 추첨된 식당이 존재하면 결과 창과 '다시 뽑기' 버튼 표시
+    if st.session_state.last_picked:
+        selected_restaurant = st.session_state.last_picked
         st.success(f"🎉 오늘 점심은 **[{selected_restaurant}]** 입니다!!")
         
-        # 안내 문구에 결제 꿀팁 추가
         if selected_restaurant in cash_only_list:
             st.warning(f"⚠️ 주의: [{selected_restaurant}]은(는) 현금(또는 개인 결제) 매장입니다! 식권대장 사용이 불가합니다.")
         else:
             st.info(f"📱 확인: [{selected_restaurant}]은(는) 식권대장 어플 결제가 가능한 매장입니다.")
             
-        st.balloons() 
+        # 맘에 안 들 경우 다시 뽑는 버튼
+        if st.button("👎 아 이건 좀... (이 식당 제외하고 다시 추첨)", type="primary", use_container_width=True):
+            st.session_state.temp_rejected.add(selected_restaurant) # 임시 블랙리스트에 추가
+            st.session_state.last_picked = None # 현재 픽 초기화
+            st.rerun() # 화면 새로고침하여 즉시 반영
+
 else:
-    st.error("조건이 너무 엄격해서 남은 식당이 없습니다! 조건을 조금만 완화해 주세요.")
+    st.error("조건이 너무 엄격하거나 후보 식당을 다 까버려서 남은 식당이 없습니다! 조건을 완화해 주세요.")
